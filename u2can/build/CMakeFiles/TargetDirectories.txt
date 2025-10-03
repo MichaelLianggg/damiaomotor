@@ -1,3 +1,0 @@
-/home/lly/motor-control-routine/C++例程/u2can/build/CMakeFiles/rebuild_cache.dir
-/home/lly/motor-control-routine/C++例程/u2can/build/CMakeFiles/edit_cache.dir
-/home/lly/motor-control-routine/C++例程/u2can/build/CMakeFiles/DM_Linux_Drive.dir
