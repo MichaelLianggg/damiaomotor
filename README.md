@@ -1,9 +1,9 @@
-# 达妙电机c++例程
+# Damiao Motor C++ Example
 
-## 介绍
+## Introduction
 
-这是控制达妙电机的c++例程。
+This is a C++ example program for controlling a Damiao motor.
 
-硬件设备需要达妙的**USB转CANFD设备**或者达妙的**USB转CAN设备**，分别对应**u2canfd**文件夹和**u2can**文件夹。
+The hardware required is Damiao's **USB to CANFD Device** or Damiao's **USB to CAN Device**, corresponding to the **u2canfd** and **u2can** folders, respectively.
 
-关于代码的安装编译和使用，**u2canfd**文件夹和**u2can**文件夹里的readme有详细说明。
+For detailed instructions on installing, compiling, and using the code, please refer to the readme files in the **u2canfd** and **u2can** folders.
