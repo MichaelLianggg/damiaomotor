@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/lly/motor-control-routine/C++例程/u2can/build",
+  "command": "/usr/bin/g++    -g   -o CMakeFiles/DM_Linux_Drive.dir/test_damiao.cpp.o -c /home/lly/motor-control-routine/C++例程/u2can/test_damiao.cpp",
+  "file": "/home/lly/motor-control-routine/C++例程/u2can/test_damiao.cpp"
+}
+]
