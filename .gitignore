@@ -1,0 +1,38 @@
+# Build directories
+/build/
+
+# Compiled object files
+*.o
+*.obj
+*.so
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+DM_Linux_Drive
+
+# CMake files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# IDE files
+.vscode/
+*.code-workspace
+*.suo
+*.user
+*.userosscache
+*.sln
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Temporary
+*.tmp
+*~
