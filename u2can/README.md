@@ -1,204 +1,199 @@
-# 达妙电机Linux-C++驱动库
-该驱动库对达妙客户提供的驱动库进行了魔改，增加了诸多功能。最低支持的C++版本为C++11
+# Damiao Motor Linux C++ Driver Library
 
-该驱动库目前只能在**Linux**下使用，特别适合使用ROS的宝宝
+This driver library is a modified version of the driver provided to Damiao customers, with many additional features. Minimum supported C++ standard is C++11.
 
-**欢迎加入QQ群：677900232 进行达妙电机技术交流。欢迎进入达妙店铺进行点击选购**[首页-达妙智能控制企业店-淘宝网 (taobao.com)](https://shop290016675.taobao.com/?spm=pc_detail.29232929/evo365560b447259.shop_block.dshopinfo.59f47dd6w4Z4dX)
+This driver currently only works on **Linux**, and is especially suitable for users who use ROS.
 
-### 1.引用达妙库
+**Join the QQ group 677900232 for Damiao motor technical discussions. Visit the Damiao store to browse products:** [Damiao Store - Taobao](https://shop290016675.taobao.com/?spm=pc_detail.29232929/evo365560b447259.shop_block.dshopinfo.59f47dd6w4Z4dX)
 
-​	通过头文件引入达妙库
+### 1. Include the Damiao library
+
+Include the Damiao header:
 
 ```c++
 #include "damiao.h"
 ```
 
-### 2.定义控制对象
+### 2. Define control objects
 
-​	对电机进行控制需要定义相关的对象。
+To control a motor you need to define several objects.
 
-​	首先是串口对象，达妙的USB转串口默认是921600波特率，然后串口号的选择大家根据自己linux设备下的串口号进行选择。
+First, create a serial port object. Damiao's USB-to-serial uses 921600 baud by default; choose the device path according to your Linux system.
 
 ```c++
 auto serial = std::make_shared<SerialPort>("/dev/ttyACM0", B921600);
 ```
 
-​	然后要定义相关的电机控制对象和电机对象。其中电机对象中第一个参数是电机类型需要进行选择，第二个参数是电机的SlaveID即CANID即电机控制的ID，**第三个参数是MasterID即主机ID，主机ID不要设为0x00，建议设置为CANID基础上＋0x10，例如下面的0x11.**
+Then define the motor control object and motor objects. In the motor constructor, the first parameter is the motor type, the second is the motor's SlaveID (CAN ID), and the third is the MasterID (host ID). Do not set MasterID to 0x00. It is recommended to set MasterID as SlaveID + 0x10, for example 0x11 below.
 
-**MasterID和SlaveID需要在达妙上位机进行设置！！如果出现问题请先检查MasterID是否不和SlaveID冲突，并且不为0x00**
+**MasterID and SlaveID must be configured in the Damiao PC tool!! If problems occur, first check that MasterID does not conflict with SlaveID and is not 0x00.**
 
-**MasterID不要设置为0x00**
-
-**MasterID不要设置为0x00**
-
-**MasterID不要设置为0x00**
+**Do not set MasterID to 0x00.**
 
 ```c++
-auto dm =damiao::Motor_Control(serial);
-damiao::Motor M1(damiao::DM4310,0x01, 0x11);
-damiao::Motor M2(damiao::DM4310,0x05, 0x15);
+auto dm = damiao::Motor_Control(serial);
+damiao::Motor M1(damiao::DM4310, 0x01, 0x11);
+damiao::Motor M2(damiao::DM4310, 0x05, 0x15);
 ```
 
-### 3.电机状态
+### 3. Motor state
 
-#### 3.1 添加电机
+#### 3.1 Add motors
 
-添加电机是addMotor。
+Add motors using addMotor:
 
 ```c++
 dm.addMotor(&M1);
 dm.addMotor(&M2);
 ```
 
-#### 3.2使能电机
+#### 3.2 Enable motors
 
-**建议：如果要修改电机参数。建议使能放在最后**
+Recommendation: if you will modify motor parameters, enable the motors at the end.
 
 ```c++
 dm.enable(M1);
 dm.enable(M2);
 ```
 
-​	此代码为兼容旧固件，关于旧版本电机固件，使能对应不同模式需要加上使能的模式（即需要使能电机对应的模式，并不能修改电机此时的模式）**注意需要使能电机此时对应的模式，并不能修改电机内部的模式**
+For compatibility with older firmware, enabling might require specifying the mode (the motor must be enabled in the mode it currently uses; you cannot change the internal mode by calling enable_old).
 
 ```c++
-dm.enable_old(Motor1,damiao::MIT_MODE);
-dm.enable_old(Motor2,damiao::POS_VEL_MODE);
-dm.enable_old(Motor3,damiao::VEL_MODE);
+dm.enable_old(Motor1, damiao::MIT_MODE);
+dm.enable_old(Motor2, damiao::POS_VEL_MODE);
+dm.enable_old(Motor3, damiao::VEL_MODE);
 ```
 
-#### 3.3设置电机零点
+#### 3.3 Set motor zero position
 
-将电机在失能状态下摆到需要设置为0点的位置，然后运行下面两行，电机将会将当前位置作为电机0点。
+With the motor disabled, move it to the desired zero position and run the following; the current position will be stored as the motor's zero.
 
 ```c++
 dm.set_zero_position(M1);
 dm.set_zero_position(M2);
 ```
 
-#### 3.4 失能电机
+#### 3.4 Disable motors
 
 ```c++
 dm.disable(M1);
 dm.disable(M2);
 ```
 
-#### 3.5 电机状态获取
+#### 3.5 Retrieve motor state
 
-达妙电机默认是需要每发送一帧控制指令才能获得当前电机力矩、位置、速度等信息。如果在没有发送控制指令的过程中想要获得电机此时的状态可以通过以下指令。
+Damiao motors by default return torque, position, velocity, etc. only when a control frame is sent. If you want to get the motor state without sending a control command, use:
 
 ```c++
 dm.refresh_motor_status(M1);
 dm.refresh_motor_status(M2);
-std::cout<<"motor1--- POS:"<<M1.Get_Position()<<" VEL:"<<M1.Get_Velocity()<<" CUR:"<<M1.Get_tau()<<std::endl;
-std::cout<<"motor2--- POS:"<<M2.Get_Position()<<" VEL:"<<M2.Get_Velocity()<<" CUR:"<<M2.Get_tau()<<std::endl;
+std::cout << "motor1--- POS:" << M1.Get_Position() << " VEL:" << M1.Get_Velocity() << " CUR:" << M1.Get_tau() << std::endl;
+std::cout << "motor2--- POS:" << M2.Get_Position() << " VEL:" << M2.Get_Velocity() << " CUR:" << M2.Get_tau() << std::endl;
 ```
 
-通过**refresh_motor_status**这个函数可以获得当前电机的状态，并保存到对应的电机。
+Use refresh_motor_status to obtain the current motor state and store it in the motor object.
 
-### 4.电机控制模式
+### 4. Motor control modes
 
-**推荐在每帧控制完后延迟2ms或者1ms，usb转can默认有缓冲器没有延迟也可使用，但是推荐加上延迟。**
+Recommendation: after each control command, delay 1–2ms. USB-to-CAN has internal buffering and may work without delay, but adding a delay is recommended.
 
-#### 4.1MIT模式
+#### 4.1 MIT mode
 
-​	默认的control是mit控制模式，第一个参数电机对象，第二个是kp，第三个是kd，第四个是位置，第五个是速度，第六个是扭矩。具体请参考达妙手册进行控制，参数介绍在库中有详细描述
+Default control is MIT mode. Parameters: motor object, kp, kd, position, velocity, torque. Refer to the Damiao manual for details; the library contains parameter documentation.
 
 ```c++
 dm.control_mit(M1, 50, 0.3, 0, 0, 0);
 ```
 
-#### 4.2位置速度模式
+#### 4.2 Position + Velocity mode
 
-​	第一个参数是电机对象，第二个参数是对应的位置，第三个参数是旋转到该位置用的速度.具体的参数介绍已经写了函数文档。
+Parameters: motor object, target position, velocity to reach that position. See function docs for details.
 
 ```c++
 float q = sin(std::chrono::system_clock::now().time_since_epoch().count() / 1e9);
-dm.control_pos_vel(M2, q*10, 5);
+dm.control_pos_vel(M2, q * 10, 5);
 ```
 
-#### 4.3 速度模式
+#### 4.3 Velocity mode
 
-​	第二参数就是电机的转速。
+Second parameter is the desired motor speed.
 
 ```c++
-dm.control_vel(M1, q*10);
+dm.control_vel(M1, q * 10);
 ```
 
-#### 4.4力位混合模式
+#### 4.4 Position-Force hybrid mode
 
-​	第一个是电机对象，第二个是电机位置，第三个是电机速度范围是0-10000，第四个是电机电流范围为0-10000。具体详细请查看达妙文档。
+Parameters: motor object, position, velocity range (0–10000), current range (0–10000). See Damiao documentation for details.
 
 ```c++
-dm.control_pos_force(M1,5,500, 1000);
+dm.control_pos_force(M1, 5, 500, 1000);
 ```
 
-### 5.电机状态读取
+### 5. Reading motor state
 
-电机的各个状态都保存在对应的电机对象中，需要调用可以用如下几个函数。
+Motor state values are stored in the motor object. Note: Damiao motors update their state only after a control frame is sent or after calling refresh_motor_status.
 
-**请注意！达妙的电机状态是每次发了控制帧或者刷新状态(refresh_motor_status 函数)后才能刷新电机对象的当前各个信息。！！**
-
-**达妙电机是一发一收模式，只有发送指令电机才会返回当前状态，电机才会更新**
+Damiao uses a request-response model: the motor returns its state only after receiving a command, at which point the motor object is updated.
 
 ```c++
-float pos = M1.Get_Position();  //获得电机位置
-float vel = M1.Get_Velocity();  //获得电机速度
-float tau = M1.Get_tau();       //获得电机力矩
+float pos = M1.Get_Position();  // get motor position
+float vel = M1.Get_Velocity();  // get motor velocity
+float tau = M1.Get_tau();       // get motor torque
 ```
 
-### 6.电机内部参数更改
+### 6. Changing internal motor parameters
 
-达妙电机新固件支持使用can进行电机模式修改，以及修改其他参数等操作。要求版本号5013及以上。具体请咨询达妙客服。**请注意所有保存参数、修改参数。请在失能模式下修改！！**
+Newer Damiao firmware supports changing motor modes and other parameters via CAN. Requires firmware version 5013 or above. Consult Damiao support for details. Note: perform parameter changes while the motor is disabled.
 
-#### 6.1电机控制模式更改
+#### 6.1 Change control mode
 
-通过下面的函数可以对电机的控制模式进行修改。支持MIT,POS_VEL,VEL,Torque_Pos。四种控制模式在线修改。下面是修改的demo。并且代码会有返回值，如果是True那么说明设置成功了，如果不是也不一定没修改成功hhhh。**请注意这里模式修改只是当前有效，掉电后这个模式还是修改前的**
+You can change the motor control mode online. Supported modes: MIT, POS_VEL, VEL, Torque_Pos. The functions return a boolean; true indicates success (but a false does not necessarily mean failure).
 
 ```c++
-if(dm.switchControlMode(M1, damiao::MIT_MODE))
+if (dm.switchControlMode(M1, damiao::MIT_MODE))
    std::cout << "Switch to MIT Success" << std::endl;
-if(dm.switchControlMode(M2, damiao::POS_VEL_MODE))
+if (dm.switchControlMode(M2, damiao::POS_VEL_MODE))
    std::cout << "Switch to POS_VEL_MODE Success" << std::endl;
 ```
 
-**如果要保持电机控制模式，需要最后保存参数**
+To persist the control mode, save parameters afterward.
 
-#### 6.2保存参数
+#### 6.2 Save parameters
 
-​	默认电机修改模式等操作后参数不会保存到flash中，需要使用命令如下进行保存至电机的flash中。这一个例子如下。**请注意这一个代码就把所有修改的都保存到Motor1的flash中，并且请在失能模式下进行修改**，该函数内部有自动失能的代码，防止电机在使能模式下无法保存参数。函数内部延迟了一段时间等待电机参数修改完成
+By default parameter changes are not saved to flash. Use the following to save changes to the motor's flash. Note: call this while the motor is disabled. The function internally disables the motor if needed and waits for parameter write completion.
 
 ```c++
 dm.save_motor_param(M1);
 dm.save_motor_param(M2);
 ```
 
-#### 6.3 读取内部寄存器参数
+#### 6.3 Read internal registers
 
-​	内部寄存器有很多参数都是可以通过can线读取，具体参数列表请看达妙的手册。其中可以读的参数都已经在DM_Reg这个枚举类里面了。可以通过read_motor_param进行读取
+Many internal parameters can be read via CAN. See the Damiao manual for parameter list. Readable parameters are enumerated in DM_Reg. Use read_motor_param to read values.
 
 ```c++
-std::cout<<"motor1 PMAX:"<<dm.read_motor_param(M1, damiao::PMAX)<<std::endl;
-std::cout<<"motor2 UV_Value:"<<dm.read_motor_param(M1, damiao::UV_Value)<<std::endl;
-std::cout<<"motor2 PMAX:"<<dm.read_motor_param(M2, damiao::PMAX)<<std::endl;
-std::cout<<"motor2 UV_Value:"<<dm.read_motor_param(M2, damiao::UV_Value)<<std::endl;
+std::cout << "motor1 PMAX:" << dm.read_motor_param(M1, damiao::PMAX) << std::endl;
+std::cout << "motor1 UV_Value:" << dm.read_motor_param(M1, damiao::UV_Value) << std::endl;
+std::cout << "motor2 PMAX:" << dm.read_motor_param(M2, damiao::PMAX) << std::endl;
+std::cout << "motor2 UV_Value:" << dm.read_motor_param(M2, damiao::UV_Value) << std::endl;
 ```
 
-#### 6.4改写内部寄存器参数
+#### 6.4 Modify internal registers
 
-​	内部寄存器有一部分是支持修改的，一部分是只读的（无法修改）。通过调用change_motor_param这个函数可以进行寄存器内部值修改(例如damiao::UV_Value)。并且也如同上面读寄存器的操作一样，他的寄存器的值也会同步到电机对象的内部值。
+Some internal registers are writable; others are read-only. Use change_motor_param to modify writable registers (for example, damiao::UV_Value). Changes will update the motor object's internal values.
 
-**请注意这个修改内部寄存器参数，掉电后会恢复为修改前的，并没有保存**
+Note: these changes are not persistent across power cycles unless you save parameters.
 
 ```c++
-if(dm.change_motor_param(M1, damiao::UV_Value, 12.6f))
+if (dm.change_motor_param(M1, damiao::UV_Value, 12.6f))
     std::cout << "Change UV_Value Success" << std::endl;
-std::cout<<"motor1 UV_Value:"<<dm.read_motor_param(M1, damiao::UV_Value)<<std::endl;
-if(dm.change_motor_param(M2, damiao::UV_Value, 12.6f))
+std::cout << "motor1 UV_Value:" << dm.read_motor_param(M1, damiao::UV_Value) << std::endl;
+
+if (dm.change_motor_param(M2, damiao::UV_Value, 12.6f))
     std::cout << "Change UV_Value Success" << std::endl;
-std::cout<<"motor2 UV_Value:"<<dm.read_motor_param(M2, damiao::UV_Value)<<std::endl;
-if(dm.change_motor_param(M1,damiao::CTRL_MODE,1))
+std::cout << "motor2 UV_Value:" << dm.read_motor_param(M2, damiao::UV_Value) << std::endl;
+
+if (dm.change_motor_param(M1, damiao::CTRL_MODE, 1))
     std::cout << "Change CTRL_MODE Success" << std::endl;
-std::cout<<"motor1 CTRL_MODE:"<<dm.read_motor_param(M1, damiao::CTRL_MODE)<<std::endl;
-```
-
+std::cout << "motor1 CTRL_MODE:" << dm.read_motor_param(M1, damiao::CTRL_MODE) <<
