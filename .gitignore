@@ -1,0 +1,61 @@
+# General
+.DS_Store
+Thumbs.db
+
+# Editors/IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.dist-info/
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# C/C++ / CMake
+build/
+build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# STM32 / Keil MDK-ARM / CubeIDE
+*.uvguix*
+*.uvoptx
+*.uvproj*
+*.bak
+*.dep
+*.d
+*.o
+*.elf
+*.axf
+*.map
+*.lst
+*.lin
+*.sct
+*.hex
+*.bin
+*.out
+*.crf
+*.log
+MDK-ARM/**/Objects/
+MDK-ARM/**/Listings/
+MDK-ARM/**/DebugConfig/
+RTE/
+.settings/
+Debug/
+Release/
+
+# OS-specific
+ehthumbs.db
+Icon?
