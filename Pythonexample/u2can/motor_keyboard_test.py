@@ -30,18 +30,34 @@ import serial
 from serial.tools import list_ports
 
 
-def find_serial_port():
-    """Auto-detect serial port, prefer u2can VID:PID then first available."""
-    ports = list_ports.comports()
-    if not ports:
-        raise RuntimeError("No serial ports found. Please connect the device.")
-    for port in ports:
-        if port.vid == 0x2E88 and port.pid == 0x4603:
-            print(f"Found u2can device: {port.device} ({port.description})")
-            return port.device
-    print(f"Using first available serial port: {ports[0].device} ({ports[0].description})")
-    return ports[0].device
-
+# def find_serial_port():
+#     """Auto-detect serial port, prefer u2can VID:PID then first available."""
+#     ports = list_ports.comports()
+#     if not ports:
+#         raise RuntimeError("No serial ports found. Please connect the device.")
+#     for port in ports:
+#         if port.vid == 0x2E88 and port.pid == 0x4603:
+#             print(f"Found u2can device: {port.device} ({port.description})")
+#             return port.device
+#     print(f"Using first available serial port: {ports[0].device} ({ports[0].description})")
+#     return ports[0].device
+# Auto-detect serial port device
+# def find_serial_port():
+#     """Automatically find available serial port, prefer CDC Device (VID:PID=2E88:4603) or first available port"""
+#     ports = list_ports.comports()
+#     if not ports:
+#         print("Error: No serial ports found, please check device connection.")
+#         sys.exit(1)
+    
+#     # Prioritize finding device with specific VID:PID (your u2can device)
+#     for port in ports:
+#         if port.vid == 0x2E88 and port.pid == 0x4603:
+#             print(f"Found u2can device: {port.device} ({port.description})")
+#             return port.device
+    
+#     # If specific device not found, use first available port
+#     print(f"Using first available serial port: {ports[0].device} ({ports[0].description})")
+#     return ports[0].device
 
 class KeyReader:
     """Non-blocking single-key reader using termios and select."""
@@ -88,19 +104,19 @@ def main():
     target_position = 0.0
 
     try:
-        port = find_serial_port()
-        serial_dev = serial.Serial(port, 921600, timeout=0.5)
+       # port = find_serial_port()
+        #serial_dev = serial.Serial(port, 921600, timeout=0.5)
+        serial_dev = serial.Serial("/dev/ttyACM0", 921600, timeout=1)
     except Exception as e:
         print("Failed to open serial port:", e)
         return
 
     mc = MotorControl(serial_dev)
-    # Create motor with same IDs as C++ example
-    m1 = Motor(DM_Motor_Type.DM4310, 0x002, 0x052)
+    m1 = Motor(DM_Motor_Type.DM4310, 0x02, 0x52)
     mc.addMotor(m1)
 
     print("Initializing motor...")
-    mc.disable(m1)
+   # mc.disable(m1)
     time.sleep(1)
 
     # Switch to position-force (hybrid) mode, corresponds to Torque_Pos
@@ -114,7 +130,7 @@ def main():
     motor_enabled = True
     time.sleep(1)
 
-    print_instructions()
+    #print_instructions()
     print("Starting control loop. Press ESC to exit.")
 
     try:
