@@ -4,7 +4,7 @@
 #include <cmath>
 #include <iomanip>
 
-damiao::Motor M1(damiao::DM4310, 0x002, 0x052);
+damiao::Motor M1(damiao::DM4310, 0x02, 0x52);
 std::shared_ptr<SerialPort> serial;
 damiao::Motor_Control dm(serial);
 KeyboardControl keyboard;
