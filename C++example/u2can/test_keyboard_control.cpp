@@ -16,6 +16,9 @@ const float max_position = 12.5f;  // Max position (DM4310 limit)
 const float min_position = -12.5f; // Min position
 uint16_t current_velocity = 500;   // Velocity for position reaching (0-10000)
 uint16_t current_torque = 2000;    // Torque limit (0-10000)
+// MIT controller gains (exposed to keyboard)
+float kp = 30.0f;
+float kd = 0.3f;
 const uint16_t velocity_step_force = 100;
 const uint16_t torque_step = 500;
 bool motor_enabled = false;
@@ -143,14 +146,40 @@ void handle_keyboard_input()
     case 'p':
     case 'P':
         // Print detailed status
-        std::cout << "\n\n=== Motor Status (Force-Position Mode) ===" << std::endl;
+        std::cout << "\n\n=== Motor Status (MIT Mode) ===" << std::endl;
         std::cout << "Current Position: " << current_position << " rad" << std::endl;
         std::cout << "Target Position: " << target_position << " rad" << std::endl;
         std::cout << "Actual Torque: " << M1.Get_tau() << " Nm" << std::endl;
         std::cout << "Velocity Parameter: " << current_velocity << std::endl;
         std::cout << "Torque Limit: " << current_torque << std::endl;
+        std::cout << "KP: " << kp << " | KD: " << kd << std::endl;
         std::cout << "Status: " << (motor_enabled ? "ENABLED" : "DISABLED") << std::endl;
         std::cout << "=========================================\n" << std::endl;
+        break;
+
+    // KP / KD tuning via keyboard
+    case '+':
+    case '=': // some keyboards send '=' for unshifted plus
+        kp += 1.0f;
+        std::cout << "\n[INFO] KP increased to: " << kp << std::endl;
+        break;
+
+    case '-':
+    case '_':
+        kp -= 1.0f;
+        if (kp < 0.0f) kp = 0.0f;
+        std::cout << "\n[INFO] KP decreased to: " << kp << std::endl;
+        break;
+
+    case ']':
+        kd += 0.05f;
+        std::cout << "\n[INFO] KD increased to: " << kd << std::endl;
+        break;
+
+    case '[':
+        kd -= 0.05f;
+        if (kd < 0.0f) kd = 0.0f;
+        std::cout << "\n[INFO] KD decreased to: " << kd << std::endl;
         break;
 
     case 27: // ESC key
@@ -181,14 +210,14 @@ int main(int argc, char *argv[])
         dm.disable(M1);
         sleep(1);
 
-        // Switch to position-force mode (POS_FORCE_MODE)
-        if (dm.switchControlMode(M1, damiao::POS_FORCE_MODE))
+        // Switch to MIT mode (MIT_MODE)
+        if (dm.switchControlMode(M1, damiao::MIT_MODE))
         {
-            std::cout << "[INFO] Switched to POS_FORCE_MODE successfully" << std::endl;
+            std::cout << "[INFO] Switched to MIT_MODE successfully" << std::endl;
         }
         else
         {
-            std::cout << "[WARNING] Failed to switch to POS_FORCE_MODE" << std::endl;
+            std::cout << "[WARNING] Failed to switch to MIT_MODE" << std::endl;
         }
 
         dm.save_motor_param(M1);
@@ -214,11 +243,21 @@ int main(int argc, char *argv[])
             }
             handle_keyboard_input();
 
-            // Apply force-position control command
+            // Apply MIT control command (replacing previous pos_force usage)
             if (motor_enabled)
             {
                 current_position = M1.Get_Position();
-                dm.control_pos_force(M1, target_position, current_velocity, current_torque);
+                // Map the keyboard parameters to MIT's expected float inputs:
+                // - kp and kd are chosen as reasonable defaults
+                // - q is target position
+                // - dq is mapped from current_velocity (0-10000) -> [-DQ_MAX, DQ_MAX]
+                // - tau is mapped from current_torque (0-10000) -> [-TAU_MAX, TAU_MAX]
+                float kp = 30.0f;
+                float kd = 0.3f;
+                auto limits = M1.get_limit_param();
+                float dq = (static_cast<float>(current_velocity) / 10000.0f) * limits.DQ_MAX;
+                float tau = (static_cast<float>(current_torque) / 10000.0f) * limits.TAU_MAX;
+                dm.control_mit(M1, kp, kd, target_position, dq, tau);
             }
 
             // Refresh and display motor status

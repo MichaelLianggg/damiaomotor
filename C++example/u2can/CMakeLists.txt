@@ -16,7 +16,7 @@ set(SOURCES_DAMIAO
     test_damiao.cpp
 )
 
-# Keyboard control program (Force-Position Mode)
+# Keyboard control program (MIT Mode)
 set(SOURCES_KEYBOARD
     damiao.h
     SerialPort.h
@@ -27,11 +27,11 @@ set(SOURCES_KEYBOARD
 # Build both executables
 add_executable(DM_Linux_Drive ${SOURCES_DAMIAO})
 add_executable(test_keyboard_control ${SOURCES_KEYBOARD})
-add_executable(force_position_control ${SOURCES_KEYBOARD})
+add_executable(mit_control ${SOURCES_KEYBOARD})
 
 # Link pthread for keyboard control
 target_link_libraries(test_keyboard_control PRIVATE pthread)
-target_link_libraries(force_position_control PRIVATE pthread)
+target_link_libraries(mit_control PRIVATE pthread)
 
 # Set compiler flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
@@ -49,8 +49,8 @@ add_custom_target(run_keyboard
     COMMENT "Running keyboard control program..."
 )
 
-add_custom_target(run_force_position
-    COMMAND ./force_position_control
-    DEPENDS force_position_control
-    COMMENT "Running force-position control program..."
+add_custom_target(run_mit
+    COMMAND ./mit_control
+    DEPENDS mit_control
+    COMMENT "Running MIT control program..."
 )

@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 """
-Keyboard-driven motor test script (Python)
+Keyboard-driven motor test script (Python) - MIT Mode
 
-Controls (same mapping as provided C++ example):
+Controls:
   w/W : increase target position
   s/S : decrease target position
   a/A : set target to min
   d/D : set target to max
   r/R : reset target to 0
-  j/J : increase velocity parameter
-  k/K : decrease velocity parameter
-  i/I : increase torque limit
-  l/L : decrease torque limit
+  j/J : increase Kp (proportional gain)
+  k/K : decrease Kp (proportional gain)
+  i/I : increase Kd (derivative gain)
+  l/L : decrease Kd (derivative gain)
   q/Q : enable motor
   e/E : disable motor
   p/P : print detailed status
   ESC : exit
 
-This script reuses the Motor and MotorControl classes from DM_CAN.py.
+This script uses MIT control mode with the Motor and MotorControl classes from DM_CAN.py.
 """
 
 import sys
@@ -25,7 +25,7 @@ import time
 import termios
 import tty
 import select
-from DM_CAN import Motor, MotorControl, DM_Motor_Type, Control_Type
+from DM_CAN import Motor, MotorControl, DM_Motor_Type, Control_Type, DM_variable
 import serial
 from serial.tools import list_ports
 
@@ -79,25 +79,27 @@ class KeyReader:
 
 
 def print_instructions():
-    print("Keyboard controls:")
+    print("Keyboard controls (MIT Mode):")
     print("  w/s: increase/decrease target position")
     print("  a/d: set target to min/max")
     print("  r: reset target to 0")
-    print("  j/k: increase/decrease velocity parameter")
-    print("  i/l: increase/decrease torque limit")
+    print("  j/k: increase/decrease Kp (proportional gain)")
+    print("  i/l: increase/decrease Kd (derivative gain)")
     print("  q: enable motor, e: disable motor")
     print("  p: print detailed status, ESC: exit")
 
 
 def main():
-    # Parameters (same defaults as C++ example)
+    # Parameters for MIT mode
     position_step = 0.5
     max_position = 12.5
     min_position = -12.5
-    current_velocity = 500
-    current_torque = 2000
-    velocity_step_force = 100
-    torque_step = 500
+    kp = 10.0  # MIT mode proportional gain
+    kd = 1.0   # MIT mode derivative gain
+    kp_step = 1.0
+    kd_step = 0.1
+    target_torque = 0.0  # Feedforward torque
+    torque_step = 0.5
 
     motor_enabled = False
     current_position = 0.0
@@ -112,16 +114,24 @@ def main():
         return
 
     mc = MotorControl(serial_dev)
-    m1 = Motor(DM_Motor_Type.DM4310, 0x02, 0x52)
+    m1 = Motor(DM_Motor_Type.DM4310, 0x002, 0x052)
     mc.addMotor(m1)
 
     print("Initializing motor...")
-   # mc.disable(m1)
+    mc.disable(m1)
     time.sleep(1)
 
-    # Switch to position-force (hybrid) mode, corresponds to Torque_Pos
-    if mc.switchControlMode(m1, Control_Type.Torque_Pos):
-        print("Switched to POS_FORCE/Torque_Pos mode")
+    # Read some parameters to establish communication with motor
+    print("Reading motor parameters...")
+    pmax = mc.read_motor_param(m1, DM_variable.PMAX)
+    vmax = mc.read_motor_param(m1, DM_variable.VMAX)
+    tmax = mc.read_motor_param(m1, DM_variable.TMAX)
+    print(f"Motor params - PMAX: {pmax}, VMAX: {vmax}, TMAX: {tmax}")
+    time.sleep(0.5)
+
+    # Switch to MIT mode
+    if mc.switchControlMode(m1, Control_Type.MIT):
+        print("Switched to MIT mode")
     else:
         print("Warning: failed to switch control mode")
 
@@ -160,17 +170,17 @@ def main():
                         target_position = 0.0
                         print(f"\n[INFO] Target position reset to 0 rad")
                     elif key == 'j':
-                        current_velocity = min(current_velocity + velocity_step_force, 10000)
-                        print(f"\n[INFO] Velocity parameter increased to: {current_velocity}")
+                        kp = min(kp + kp_step, 500)
+                        print(f"\n[INFO] Kp increased to: {kp}")
                     elif key == 'k':
-                        current_velocity = max(current_velocity - velocity_step_force, 0)
-                        print(f"\n[INFO] Velocity parameter decreased to: {current_velocity}")
+                        kp = max(kp - kp_step, 0)
+                        print(f"\n[INFO] Kp decreased to: {kp}")
                     elif key == 'i':
-                        current_torque = min(current_torque + torque_step, 10000)
-                        print(f"\n[INFO] Torque limit increased to: {current_torque}")
+                        kd = min(kd + kd_step, 5)
+                        print(f"\n[INFO] Kd increased to: {kd}")
                     elif key == 'l':
-                        current_torque = max(current_torque - torque_step, 0)
-                        print(f"\n[INFO] Torque limit decreased to: {current_torque}")
+                        kd = max(kd - kd_step, 0)
+                        print(f"\n[INFO] Kd decreased to: {kd}")
                     elif key == 'q':
                         if not motor_enabled:
                             mc.enable(m1)
@@ -183,26 +193,27 @@ def main():
                             target_position = 0.0
                             print("\n[INFO] Motor disabled")
                     elif key == 'p':
-                        print("\n=== Motor Status (Force-Position Mode) ===")
+                        print("\n=== Motor Status (MIT Mode) ===")
                         print(f"Current Position: {current_position} rad")
                         print(f"Target Position: {target_position} rad")
                         print(f"Actual Torque: {m1.getTorque()} Nm")
-                        print(f"Velocity Parameter: {current_velocity}")
-                        print(f"Torque Limit: {current_torque}")
+                        print(f"Kp: {kp}")
+                        print(f"Kd: {kd}")
+                        print(f"Target Torque: {target_torque} Nm")
                         print(f"Status: {'ENABLED' if motor_enabled else 'DISABLED'}")
                         print("=========================================")
 
                 # control and refresh when motor enabled
                 if motor_enabled:
                     current_position = m1.getPosition()
-                    # pass velocity and torque parameters to control_pos_force
-                    mc.control_pos_force(m1, target_position, int(current_velocity), int(current_torque))
+                    # MIT control: kp, kd, target_position, target_velocity, target_torque
+                    mc.controlMIT(m1, kp, kd, target_position, 0, target_torque)
 
                 mc.refresh_motor_status(m1)
 
                 # Print a compact status on one line (overwrite)
                 status_line = (f"\r[POS: {current_position:7.2f} rad | TGT: {target_position:7.2f} rad | "
-                               f"TAU: {current_torque:5d} | VEL: {current_velocity:5d} | "
+                               f"Kp: {kp:5.1f} | Kd: {kd:4.2f} | "
                                f"ACT: {m1.getTorque():6.2f} Nm | "
                                f"Status: {'ENABLED' if motor_enabled else 'DISABLED'} ]   ")
                 sys.stdout.write(status_line)

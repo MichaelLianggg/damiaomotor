@@ -31,8 +31,8 @@ MotorControl1=MotorControl(serial_device)
 MotorControl1.addMotor(Motor1)
 MotorControl1.addMotor(Motor2)
 
-if MotorControl1.switchControlMode(Motor2,Control_Type.Torque_Pos):
-    print("switch POS_VEL success")
+if MotorControl1.switchControlMode(Motor2,Control_Type.MIT):
+    print("switch MIT success")
 # c
 print("sub_ver:",MotorControl1.read_motor_param(Motor1,DM_variable.sub_ver))
 print("Gr:",MotorControl1.read_motor_param(Motor1,DM_variable.Gr))
@@ -57,14 +57,19 @@ i=0
 while i<10000:
     q=math.sin(time.time())
     i=i+1
-    MotorControl1.control_pos_force(Motor2, 2000, 1000,100)
+
+    MotorControl1.refresh_motor_status(Motor2)
+    print("Motor1:","POS:",Motor2.getPosition(),"VEL:",Motor1.getVelocity(),"TORQUE:",Motor1.getTorque())
+
+
+    #MotorControl1.control_pos_force(Motor2, 2000, 1000,100)
     # MotorControl1.control_Vel(Motor1, q*5)
    # MotorControl1.control_Pos_Vel(Motor1,q*8,30)
     # print("Motor1:","POS:",Motor1.getPosition(),"VEL:",Motor1.getVelocity(),"TORQUE:",Motor1.getTorque())
-    # MotorControl1.controlMIT(Motor2, 35, 0.1, 8*q, 0, 0)
+    MotorControl1.controlMIT(Motor2, 35, 0.1, 8*q, 0, 0)
 
     #MotorControl1.control_Vel(Motor2, 8*q)
-    # print("Motor2:","POS:",Motor2.getPosition(),"VEL:",Motor2.getVelocity(),"TORQUE:",Motor2.getTorque())
+    #print("Motor2:","POS:",Motor2.getPosition(),"VEL:",Motor2.getVelocity(),"TORQUE:",Motor2.getTorque())
     #print(Motor2.getTorque())
     # print(Motor2.getTorque())
     time.sleep(0.001)

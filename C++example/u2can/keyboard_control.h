@@ -105,7 +105,7 @@ public:
     // Print control instructions
     static void printInstructions()
     {
-        std::cout << "\n=== Keyboard Control Instructions (Force-Position Mode) ===" << std::endl;
+    std::cout << "\n=== Keyboard Control Instructions (MIT Mode) ===" << std::endl;
         std::cout << "w/W - Increase target position (+0.5 rad)" << std::endl;
         std::cout << "s/S - Decrease target position (-0.5 rad)" << std::endl;
         std::cout << "a/A - Set to minimum position (-12.5 rad)" << std::endl;
@@ -118,6 +118,8 @@ public:
         std::cout << "q/Q - Enable motor" << std::endl;
         std::cout << "e/E - Disable motor" << std::endl;
         std::cout << "p/P - Print detailed motor status" << std::endl;
+    std::cout << "+ / - : Increase / Decrease KP (by 1.0)" << std::endl;
+    std::cout << "[ / ] : Decrease / Increase KD (by 0.05)" << std::endl;
         std::cout << "ESC - Exit program" << std::endl;
         std::cout << "============================================================\n" << std::endl;
     }

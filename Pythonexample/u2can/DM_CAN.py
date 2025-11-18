@@ -82,10 +82,12 @@ class MotorControl:
         self.serial_ = serial_device
         self.motors_map = dict()
         self.data_save = bytes()  # Save data
-        if self.serial_.is_open:  # Open the serial port
-            print("Serial port is open")
-            serial_device.close()
-        self.serial_.open()
+        # ✅ 修复：只在串口未打开时才打开，不要关闭已打开的串口
+        if not self.serial_.is_open:
+            print("Opening serial port...")
+            self.serial_.open()
+        else:
+            print("Serial port is already open")
 
     def controlMIT(self, DM_Motor, kp: float, kd: float, q: float, dq: float, tau: float):
         """
@@ -241,11 +243,12 @@ class MotorControl:
         # Include remaining unparsed data from last time
         data_recv = b''.join([self.data_save, self.serial_.read_all()])
         packets = self.__extract_packets(data_recv)
-        for packet in packets:
-            data = packet[7:15]
-            CANID = (packet[6] << 24) | (packet[5] << 16) | (packet[4] << 8) | packet[3]
-            CMD = packet[1]
-            self.__process_packet(data, CANID, CMD)
+        if len(packets) > 0:
+            for packet in packets:
+                data = packet[7:15]
+                CANID = (packet[6] << 24) | (packet[5] << 16) | (packet[4] << 8) | packet[3]
+                CMD = packet[1]
+                self.__process_packet(data, CANID, CMD)
 
     def recv_set_param_data(self):
         data_recv = self.serial_.read_all()
@@ -459,22 +462,34 @@ class MotorControl:
     # -------------------------------------------------
     # Extract packets from the serial data
     def __extract_packets(self, data):
+        """
+        Extract complete CAN frames from serial data.
+        Frame format: [0x55, 0xAA, ..., 0x55] (16 bytes total)
+        """
         frames = []
-        header = 0xAA
-        tail = 0x55
         frame_length = 16
         i = 0
-        remainder_pos = 0
-
-        while i <= len(data) - frame_length:
-            if data[i] == header and data[i + frame_length - 1] == tail:
-                frame = data[i:i + frame_length]
-                frames.append(frame)
-                i += frame_length
-                remainder_pos = i
+        
+        # 寻找完整的帧：帧头 0x55 0xAA 和帧尾 0x55
+        while i < len(data) - 1:
+            # 检查帧头 0x55 0xAA
+            if data[i] == 0x55 and i + 1 < len(data) and data[i+1] == 0xAA:
+                # 检查是否有完整的帧（16 字节）且帧尾正确
+                if i + frame_length <= len(data) and data[i + frame_length - 1] == 0x55:
+                    frame = data[i:i + frame_length]
+                    frames.append(frame)
+                    i += frame_length
+                else:
+                    i += 1
             else:
                 i += 1
-        self.data_save = data[remainder_pos:]
+        
+        # 保存未完整的残留数据以备下次读取
+        if i < len(data):
+            self.data_save = data[i:]
+        else:
+            self.data_save = bytes()
+        
         return frames
 
 
